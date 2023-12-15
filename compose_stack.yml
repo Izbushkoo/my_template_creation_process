@@ -1,0 +1,45 @@
+version: "3"
+services:
+  postgres:
+    container_name: 'postgres_development'
+    image: postgres:15
+    command: postgres -c "max_connections=10000"
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - project
+    ports:
+      - ${POSTGRES_PORT}:5432
+  pg_web:
+    container_name: 'postgres_web'
+    image: sosedoff/pgweb
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    links:
+      - postgres:postgres  # my database container is called postgres, not db
+    env_file:
+      - .env
+    environment:
+      - PGWEB_DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVER}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      - postgres  # my database container is called postgres, not db
+    networks:
+      - project
+  app:
+    build: .
+    restart: unless-stopped
+    container_name: application # cookiecutter
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT}:8787"
+    networks:
+      - project
+    depends_on:
+      - postgres
+      - pg_web
+networks:
+  project:
+    external: false
